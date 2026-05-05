@@ -82,7 +82,6 @@
     #timer { position: fixed; top: 20px; right: 20px; font-size: 1.2rem; color: var(--gold); }
     #message { margin-top: 15px; font-size: 1.2rem; height: 25px; color: var(--gold); }
 
-    /* Modal Styling */
     #settingsModal {
       display: none; position: fixed; z-index: 10; left: 0; top: 0;
       width: 100%; height: 100%; background-color: rgba(0,0,0,0.8);
@@ -92,10 +91,7 @@
       border: 1px solid var(--text-color); width: 400px; border-radius: 10px;
       position: relative; text-align: left;
     }
-    .close-btn {
-      position: absolute; top: 10px; right: 15px; font-size: 24px;
-      cursor: pointer; color: var(--text-color);
-    }
+    .close-btn { position: absolute; top: 10px; right: 15px; font-size: 24px; cursor: pointer; color: var(--text-color); }
     .reset-all { border-color: #ff4d4d; color: #ff4d4d; margin-top: 20px; width: 100%; }
     .reset-all:hover { background: #ff4d4d; color: white; }
   </style>
@@ -118,8 +114,8 @@
 
   <div class="controls">
     <label>Discs: </label>
-    <input type="number" id="discCount" value="3" min="3" max="15">
-    <span>(Max 15 rings)</span>
+    <input type="number" id="discCount" value="3" min="3" max="15" onkeydown="if(event.key==='Enter') init()">
+    <span style="font-size: 0.8rem; margin-right: 10px;">(Max 15 rings)</span>
     <button onclick="init()">Restart (R)</button>
     <button onclick="undoMove()">Undo (U)</button>
     <button onclick="toggleModal()">Settings</button>
@@ -141,9 +137,10 @@
         <li><strong>Numbers 1, 2, 3:</strong> Select/Move Towers</li>
         <li><strong>U Key:</strong> Undo last move</li>
         <li><strong>R Key:</strong> Restart level</li>
-        <li><strong>Drag & Drop:</strong> Use mouse to move rings</li>
+        <li><strong>Enter:</strong> Apply new disc count</li>
+        <li><strong>Drag & Drop:</strong> Mouse movement</li>
       </ul>
-      <p><small>Timer starts on your first move!</small></p>
+      <p><small>Timer starts on your first click or key press!</small></p>
       <button class="reset-all" onclick="clearAllProgress()">RESET ALL PROGRESS</button>
     </div>
   </div>
@@ -159,11 +156,12 @@
 
     function init() {
       const n = Math.min(parseInt(document.getElementById("discCount").value), 15);
+      document.getElementById("discCount").value = n; // Ensure input reflects the cap
       towers = { 1: [], 2: [], 3: [] };
       moveHistory = [];
       moves = 0;
       gameActive = true;
-      timerRunning = false; // Reset timer state
+      timerRunning = false;
       
       document.getElementById("moveCount").textContent = "0";
       document.getElementById("message").textContent = "";
@@ -197,6 +195,8 @@
       
       disc.addEventListener("dragstart", (e) => {
         if(!gameActive) return;
+        // START TIMER IF DRAG STARTS
+        if(!timerRunning) startTimer();
         e.dataTransfer.setData("fromTower", towerId);
       });
 
@@ -211,11 +211,6 @@
       const targetSize = targetTowerStack[targetTowerStack.length - 1];
 
       if (!targetSize || discSize < targetSize) {
-        // START TIMER ON FIRST SUCCESSFUL MOVE
-        if (!timerRunning && !isUndo) {
-          startTimer();
-        }
-
         if (!isUndo) moveHistory.push({ from: fromId, to: toId });
         
         towers[toId].push(towers[fromId].pop());
@@ -247,11 +242,9 @@
       }
     }
 
-    // Records Logic
     function saveRecords(n) {
       const timeStr = document.getElementById("timer").textContent;
       const currentTimeMs = Date.now() - startTime;
-      
       let records = JSON.parse(localStorage.getItem('hanoi_records') || '{}');
       if (!records[n]) records[n] = { time: Infinity, timeStr: "--:--", moves: Infinity };
 
@@ -285,7 +278,6 @@
       }
     }
 
-    // UI & Timer
     function toggleModal() {
       const m = document.getElementById("settingsModal");
       m.style.display = (m.style.display === "block") ? "none" : "block";
@@ -327,6 +319,8 @@
       if (key === 'u') undoMove();
       if (key === 'r') init();
       if (["1", "2", "3"].includes(key) && gameActive) {
+        // START TIMER IF KEYBOARD PRESS
+        if(!timerRunning) startTimer();
         const tid = parseInt(key);
         if (selectedTower === null) {
           if (towers[tid].length > 0) {
