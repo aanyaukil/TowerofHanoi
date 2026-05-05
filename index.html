@@ -30,7 +30,7 @@
     }
     .records { color: var(--gold); margin-bottom: 10px; }
 
-    .controls { margin: 10px; padding: 10px; background: var(--accent); border-radius: 8px; display: inline-block; }
+    .controls { margin: 10px; padding: 12px; background: var(--accent); border-radius: 8px; display: inline-block; }
     
     .tower-container {
       display: flex;
@@ -117,8 +117,9 @@
   </div>
 
   <div class="controls">
-    <label>Discs:</label>
+    <label>Discs: </label>
     <input type="number" id="discCount" value="3" min="3" max="15">
+    <span>(Max 15 rings)</span>
     <button onclick="init()">Restart (R)</button>
     <button onclick="undoMove()">Undo (U)</button>
     <button onclick="toggleModal()">Settings</button>
@@ -142,7 +143,7 @@
         <li><strong>R Key:</strong> Restart level</li>
         <li><strong>Drag & Drop:</strong> Use mouse to move rings</li>
       </ul>
-      <p><small>Records are saved per disc count level.</small></p>
+      <p><small>Timer starts on your first move!</small></p>
       <button class="reset-all" onclick="clearAllProgress()">RESET ALL PROGRESS</button>
     </div>
   </div>
@@ -154,6 +155,7 @@
     let moves = 0;
     let startTime, timerInterval;
     let gameActive = false;
+    let timerRunning = false;
 
     function init() {
       const n = Math.min(parseInt(document.getElementById("discCount").value), 15);
@@ -161,13 +163,14 @@
       moveHistory = [];
       moves = 0;
       gameActive = true;
+      timerRunning = false; // Reset timer state
+      
       document.getElementById("moveCount").textContent = "0";
       document.getElementById("message").textContent = "";
       document.getElementById("idealMoves").textContent = Math.pow(2, n) - 1;
       
       updateRecordsDisplay();
       resetTimer();
-      startTimer();
 
       [1, 2, 3].forEach(id => {
         const el = document.getElementById(`tower${id}`);
@@ -208,6 +211,11 @@
       const targetSize = targetTowerStack[targetTowerStack.length - 1];
 
       if (!targetSize || discSize < targetSize) {
+        // START TIMER ON FIRST SUCCESSFUL MOVE
+        if (!timerRunning && !isUndo) {
+          startTimer();
+        }
+
         if (!isUndo) moveHistory.push({ from: fromId, to: toId });
         
         towers[toId].push(towers[fromId].pop());
@@ -232,13 +240,14 @@
       const n = parseInt(document.getElementById("discCount").value);
       if (towers[3].length === n) {
         gameActive = false;
+        timerRunning = false;
         clearInterval(timerInterval);
         document.getElementById("message").textContent = "LEVEL COMPLETE!";
         saveRecords(n);
       }
     }
 
-    // Records Logic (LocalStorage)
+    // Records Logic
     function saveRecords(n) {
       const timeStr = document.getElementById("timer").textContent;
       const currentTimeMs = Date.now() - startTime;
@@ -276,13 +285,14 @@
       }
     }
 
-    // UI Helpers
+    // UI & Timer
     function toggleModal() {
       const m = document.getElementById("settingsModal");
       m.style.display = (m.style.display === "block") ? "none" : "block";
     }
 
     function startTimer() {
+      timerRunning = true;
       startTime = Date.now();
       timerInterval = setInterval(() => {
         const elapsed = Date.now() - startTime;
@@ -292,7 +302,11 @@
       }, 1000);
     }
 
-    function resetTimer() { clearInterval(timerInterval); document.getElementById("timer").textContent = "00:00"; }
+    function resetTimer() { 
+      clearInterval(timerInterval); 
+      document.getElementById("timer").textContent = "00:00"; 
+      timerRunning = false;
+    }
 
     function updateDraggability() {
       [1, 2, 3].forEach(id => {
