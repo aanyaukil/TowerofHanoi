@@ -2,105 +2,119 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <title>Interactive Tower of Hanoi</title>
+  <title>Tower of Hanoi - Pro</title>
   <style>
     :root {
-      --wood: #8B4513;
-      --disc-color: #3498db;
+      --wood: #5d4037;
+      --bg-color: #0a192f;
+      --text-color: #64ffda;
+      --accent: #112240;
     }
     body {
-      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      font-family: 'Courier New', Courier, monospace;
       text-align: center;
-      background: #ecf0f1;
-      color: #2c3e50;
+      background: var(--bg-color);
+      color: var(--text-color);
+      margin: 0;
+      overflow-x: hidden;
     }
-    .controls { margin: 20px; }
+    h1 { margin-top: 20px; text-transform: uppercase; letter-spacing: 3px; }
+
+    .stats-container {
+      display: flex;
+      justify-content: center;
+      gap: 30px;
+      margin: 10px;
+      font-size: 1.1rem;
+    }
+
+    .controls { margin: 20px; padding: 15px; background: var(--accent); border-radius: 8px; display: inline-block; }
     
     .tower-container {
       display: flex;
       justify-content: center;
       align-items: flex-end;
-      height: 400px;
-      gap: 40px;
-      padding-top: 50px;
+      height: 500px; /* Taller area for more rings */
+      gap: 60px;
+      padding-bottom: 50px;
+      margin-top: 40px; /* Moved lower down */
     }
 
-    /* The Tower (Peg + Base) */
     .tower {
-      width: 160px;
-      height: 300px;
+      width: 180px;
+      height: 400px;
       position: relative;
       display: flex;
       flex-direction: column-reverse;
       align-items: center;
       cursor: pointer;
-      transition: background 0.3s;
       border-radius: 10px 10px 0 0;
     }
-    .tower.drag-over { background: rgba(52, 152, 219, 0.1); }
-    .tower.selected { background: rgba(241, 196, 15, 0.2); }
+    .tower.selected { background: rgba(100, 255, 218, 0.1); border-radius: 10px; }
 
-    /* The vertical peg */
     .tower::before {
       content: "";
       position: absolute;
       bottom: 0;
-      width: 10px;
+      width: 12px;
       height: 100%;
       background: var(--wood);
-      border-radius: 5px;
+      border-radius: 6px;
       z-index: 1;
     }
-    /* The horizontal base */
     .tower::after {
       content: "";
       position: absolute;
-      bottom: -10px;
-      width: 180px;
-      height: 10px;
+      bottom: -15px;
+      width: 200px;
+      height: 15px;
       background: var(--wood);
       border-radius: 5px;
     }
 
     .disc {
-      height: 24px;
+      height: 22px;
       margin-bottom: 2px;
-      border-radius: 12px;
-      background: var(--disc-color);
-      color: white;
+      border-radius: 5px;
+      color: #0a192f;
       text-align: center;
-      line-height: 24px;
-      font-size: 14px;
+      line-height: 22px;
+      font-size: 12px;
       font-weight: bold;
       z-index: 2;
-      box-shadow: 0 2px 4px rgba(0,0,0,0.2);
-      transition: transform 0.2s;
+      box-shadow: 0 2px 5px rgba(0,0,0,0.5);
+      transition: transform 0.1s, background 0.3s;
     }
-    .disc[draggable="true"] { cursor: grab; }
-    .disc[draggable="true"]:active { cursor: grabbing; }
 
-    button {
-      padding: 10px 20px;
-      font-size: 16px;
+    button, input {
+      background: transparent;
+      border: 1px solid var(--text-color);
+      color: var(--text-color);
+      padding: 8px 15px;
+      border-radius: 4px;
       cursor: pointer;
-      background: #2980b9;
-      color: white;
-      border: none;
-      border-radius: 5px;
     }
-    button:hover { background: #3498db; }
-    #message { margin-top: 30px; font-weight: bold; color: #27ae60; font-size: 1.2rem; }
+    button:hover { background: var(--text-color); color: var(--bg-color); }
+    
+    #timer { position: fixed; top: 20px; right: 20px; font-size: 1.5rem; color: #f1c40f; }
+    #message { margin-top: 20px; font-size: 1.5rem; height: 30px; }
   </style>
 </head>
 <body>
 
+  <div id="timer">00:00</div>
+
   <h1>Tower of Hanoi</h1>
-  <p>Drag & Drop | Keyboard (Press 1, 2, or 3 to move)</p>
+
+  <div class="stats-container">
+    <div>Moves: <span id="moveCount">0</span></div>
+    <div>Ideal: <span id="idealMoves">0</span></div>
+  </div>
 
   <div class="controls">
-    <label>Discs:</label>
-    <input type="number" id="discCount" value="3" min="3" max="8">
-    <button onclick="init()">Reset</button>
+    <label>Discs (Max 15):</label>
+    <input type="number" id="discCount" value="3" min="3" max="15">
+    <button onclick="init()">Restart</button>
   </div>
 
   <div class="tower-container" id="game-container">
@@ -113,13 +127,23 @@
 
   <script>
     let towers = { 1: [], 2: [], 3: [] };
-    let selectedTower = null; // For keyboard movement
+    let selectedTower = null;
+    let moves = 0;
+    let startTime;
+    let timerInterval;
+    let gameActive = false;
 
     function init() {
-      const n = parseInt(document.getElementById("discCount").value);
+      const n = Math.min(parseInt(document.getElementById("discCount").value), 15);
       towers = { 1: [], 2: [], 3: [] };
+      moves = 0;
+      gameActive = true;
+      document.getElementById("moveCount").textContent = "0";
       document.getElementById("message").textContent = "";
-      selectedTower = null;
+      document.getElementById("idealMoves").textContent = Math.pow(2, n) - 1;
+      
+      resetTimer();
+      startTimer();
 
       [1, 2, 3].forEach(id => {
         const el = document.getElementById(`tower${id}`);
@@ -128,52 +152,44 @@
         setupDropEvents(el);
       });
 
-      // Colors for variety
-      const colors = ['#e74c3c', '#e67e22', '#f1c40f', '#2ecc71', '#3498db', '#9b59b6', '#34495e', '#16a085'];
-
       for (let i = n; i >= 1; i--) {
         towers[1].push(i);
-        createDiscElement(1, i, n, colors[i-1]);
+        createDiscElement(1, i, n);
       }
       updateDraggability();
     }
 
-    function createDiscElement(towerId, size, max, color) {
+    function createDiscElement(towerId, size, max) {
       const disc = document.createElement("div");
       disc.className = "disc";
       disc.id = "disc-" + size;
-      disc.style.width = (30 + (size / max * 70)) + "%";
-      disc.style.backgroundColor = color;
-      disc.textContent = size;
+      // Dynamic sizing for up to 15 rings
+      disc.style.width = (20 + (size / max * 80)) + "%";
+      // Gradient of colors based on size
+      const hue = (size * 25) % 360;
+      disc.style.background = `hsl(${hue}, 70%, 60%)`;
       disc.dataset.size = size;
       
-      disc.draggable = false; // Set by updateDraggability
       disc.addEventListener("dragstart", (e) => {
+        if(!gameActive) return;
         e.dataTransfer.setData("fromTower", towerId);
-        e.dataTransfer.setData("discSize", size);
       });
 
       document.getElementById(`tower${towerId}`).appendChild(disc);
     }
 
     function updateDraggability() {
-      // Only the top disc of each tower is draggable
       [1, 2, 3].forEach(id => {
-        const towerDiv = document.getElementById(`tower${id}`);
-        const discs = towerDiv.querySelectorAll(".disc");
+        const discs = document.getElementById(`tower${id}`).querySelectorAll(".disc");
         discs.forEach((d, idx) => {
-          d.draggable = (idx === discs.length - 1);
+          d.draggable = (idx === discs.length - 1 && gameActive);
         });
       });
     }
 
     function setupDropEvents(towerEl) {
       towerEl.addEventListener("dragover", (e) => e.preventDefault());
-      towerEl.addEventListener("dragenter", () => towerEl.classList.add("drag-over"));
-      towerEl.addEventListener("dragleave", () => towerEl.classList.remove("drag-over"));
-      
       towerEl.addEventListener("drop", (e) => {
-        towerEl.classList.remove("drag-over");
         const fromTowerId = parseInt(e.dataTransfer.getData("fromTower"));
         const toTowerId = parseInt(towerEl.dataset.id);
         executeMove(fromTowerId, toTowerId);
@@ -181,46 +197,64 @@
     }
 
     function executeMove(fromId, toId) {
-      if (fromId === toId) return;
+      if (fromId === toId || isNaN(fromId)) return;
       
       const discSize = towers[fromId][towers[fromId].length - 1];
-      const targetTowerSize = towers[toId][towers[toId].length - 1];
+      const targetTowerStack = towers[toId];
+      const targetTowerSize = targetTowerStack[targetTowerStack.length - 1];
 
-      // Validation: Is the move legal?
+      // Pure logic: if illegal, just do nothing
       if (!targetTowerSize || discSize < targetTowerSize) {
         towers[toId].push(towers[fromId].pop());
         const discElem = document.getElementById(`disc-${discSize}`);
         document.getElementById(`tower${toId}`).appendChild(discElem);
+        
+        moves++;
+        document.getElementById("moveCount").textContent = moves;
+        
         updateDraggability();
         checkWin();
-      } else {
-        alert("Invalid Move! You cannot place a larger disc on a smaller one.");
       }
     }
 
     function checkWin() {
       const n = parseInt(document.getElementById("discCount").value);
       if (towers[3].length === n) {
-        document.getElementById("message").textContent = "🎉 You Won! Amazing job!";
-        // Make all discs non-draggable
-        document.querySelectorAll(".disc").forEach(d => d.draggable = false);
+        gameActive = false;
+        clearInterval(timerInterval);
+        document.getElementById("message").textContent = "MISSION COMPLETE";
+        updateDraggability();
       }
+    }
+
+    // Timer logic
+    function startTimer() {
+      startTime = Date.now();
+      timerInterval = setInterval(() => {
+        const elapsed = Date.now() - startTime;
+        const mins = Math.floor(elapsed / 60000).toString().padStart(2, '0');
+        const secs = Math.floor((elapsed % 60000) / 1000).toString().padStart(2, '0');
+        document.getElementById("timer").textContent = `${mins}:${secs}`;
+      }, 1000);
+    }
+
+    function resetTimer() {
+      clearInterval(timerInterval);
+      document.getElementById("timer").textContent = "00:00";
     }
 
     // Keyboard Logic
     window.addEventListener("keydown", (e) => {
+      if(!gameActive) return;
       const key = e.key;
       if (["1", "2", "3"].includes(key)) {
         const towerId = parseInt(key);
-        
         if (selectedTower === null) {
-          // First press: selecting the "From" tower
           if (towers[towerId].length > 0) {
             selectedTower = towerId;
             document.getElementById(`tower${towerId}`).classList.add("selected");
           }
         } else {
-          // Second press: selecting the "To" tower
           const fromId = selectedTower;
           document.getElementById(`tower${fromId}`).classList.remove("selected");
           selectedTower = null;
