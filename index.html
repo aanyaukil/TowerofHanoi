@@ -133,7 +133,7 @@
         <option value="200" selected>Medium</option>
         <option value="50">Fast</option>
       </select>
-      <button onclick="autoSolve()" id="solveBtn">Auto-Solve (choose speed of autosolve before pressing this button)</button>
+      <button onclick="autoSolve()" id="solveBtn">Auto-Solve</button>
       
       <button onclick="toggleModal()">Settings</button>
     </div>
@@ -267,7 +267,7 @@
 
     async function autoSolve() {
       if(!gameActive || isSolving) return;
-      if(!confirm("Auto-solve will not count towards personal records.")) return;
+      if(!confirm("Auto-solve will not count towards personal records. Also remember to choose speed of autosolve- slow, medium, fast")) return;
       init(); 
       isSolving = true;
       gameActive = false;
