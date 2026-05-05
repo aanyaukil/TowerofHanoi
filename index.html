@@ -40,7 +40,10 @@
       gap: 60px;
       padding-bottom: 50px;
       margin-top: 20px;
+      transition: opacity 0.3s;
     }
+
+    .paused-game .tower-container { opacity: 0.2; pointer-events: none; }
 
     .tower {
       width: 160px;
@@ -73,6 +76,10 @@
       box-shadow: 0 2px 5px rgba(0,0,0,0.5);
     }
 
+    /* Settings modifiers */
+    .hide-numbers .disc { color: transparent; }
+    .monochrome .disc { background: #ccd6f6 !important; color: #0a192f !important; border: 1px solid #8892b0; }
+
     button, input {
       background: transparent; border: 1px solid var(--text-color);
       color: var(--text-color); padding: 5px 12px; border-radius: 4px; cursor: pointer;
@@ -82,6 +89,7 @@
     #timer { position: fixed; top: 20px; right: 20px; font-size: 1.2rem; color: var(--gold); }
     #message { margin-top: 15px; font-size: 1.2rem; height: 25px; color: var(--gold); }
 
+    /* Modal Styling */
     #settingsModal {
       display: none; position: fixed; z-index: 10; left: 0; top: 0;
       width: 100%; height: 100%; background-color: rgba(0,0,0,0.8);
@@ -92,11 +100,11 @@
       position: relative; text-align: left;
     }
     .close-btn { position: absolute; top: 10px; right: 15px; font-size: 24px; cursor: pointer; color: var(--text-color); }
+    .setting-row { margin: 15px 0; display: flex; align-items: center; justify-content: space-between; }
     .reset-all { border-color: #ff4d4d; color: #ff4d4d; margin-top: 20px; width: 100%; }
-    .reset-all:hover { background: #ff4d4d; color: white; }
   </style>
 </head>
-<body>
+<body id="game-body">
 
   <div id="timer">00:00</div>
 
@@ -115,8 +123,9 @@
   <div class="controls">
     <label>Discs: </label>
     <input type="number" id="discCount" value="3" min="3" max="15" onkeydown="if(event.key==='Enter') init()">
-    <span style="font-size: 0.8rem; margin-right: 10px;">(Max 15 rings)</span>
+    <span style="font-size: 0.8rem; margin-right: 10px;">(Max 15)</span>
     <button onclick="init()">Restart (R)</button>
+    <button onclick="togglePause()" id="pauseBtn">Pause (Space)</button>
     <button onclick="undoMove()">Undo (U)</button>
     <button onclick="toggleModal()">Settings</button>
   </div>
@@ -132,15 +141,26 @@
   <div id="settingsModal">
     <div class="modal-content">
       <span class="close-btn" onclick="toggleModal()">&times;</span>
-      <h3>Game Controls</h3>
-      <ul>
-        <li><strong>Numbers 1, 2, 3:</strong> Select/Move Towers</li>
+      <h3>Settings</h3>
+      
+      <div class="setting-row">
+        <label>Show Ring Numbers</label>
+        <input type="checkbox" id="checkNumbers" checked onchange="applyVisualSettings()">
+      </div>
+      <div class="setting-row">
+        <label>Monochrome Mode (No Color)</label>
+        <input type="checkbox" id="checkMono" onchange="applyVisualSettings()">
+      </div>
+
+      <hr style="border: 0.5px solid #233554; margin: 15px 0;">
+      
+      <h3>Controls</h3>
+      <ul style="font-size: 0.85rem;">
+        <li><strong>Numbers 1, 2, 3:</strong> Select Towers</li>
+        <li><strong>Space:</strong> Pause/Unpause</li>
         <li><strong>U Key:</strong> Undo last move</li>
         <li><strong>R Key:</strong> Restart level</li>
-        <li><strong>Enter:</strong> Apply new disc count</li>
-        <li><strong>Drag & Drop:</strong> Mouse movement</li>
       </ul>
-      <p><small>Timer starts on your first click or key press!</small></p>
       <button class="reset-all" onclick="clearAllProgress()">RESET ALL PROGRESS</button>
     </div>
   </div>
@@ -153,16 +173,22 @@
     let startTime, timerInterval;
     let gameActive = false;
     let timerRunning = false;
+    let isPaused = false;
+    let totalElapsedBeforePause = 0;
 
     function init() {
       const n = Math.min(parseInt(document.getElementById("discCount").value), 15);
-      document.getElementById("discCount").value = n; // Ensure input reflects the cap
+      document.getElementById("discCount").value = n;
       towers = { 1: [], 2: [], 3: [] };
       moveHistory = [];
       moves = 0;
       gameActive = true;
       timerRunning = false;
+      isPaused = false;
+      totalElapsedBeforePause = 0;
       
+      document.body.classList.remove("paused-game");
+      document.getElementById("pauseBtn").textContent = "Pause (Space)";
       document.getElementById("moveCount").textContent = "0";
       document.getElementById("message").textContent = "";
       document.getElementById("idealMoves").textContent = Math.pow(2, n) - 1;
@@ -191,11 +217,10 @@
       disc.style.width = (25 + (size / max * 70)) + "%";
       const hue = (size * 20) % 360;
       disc.style.background = `hsl(${hue}, 60%, 50%)`;
-      disc.dataset.size = size;
+      disc.textContent = size;
       
       disc.addEventListener("dragstart", (e) => {
-        if(!gameActive) return;
-        // START TIMER IF DRAG STARTS
+        if(!gameActive || isPaused) { e.preventDefault(); return; }
         if(!timerRunning) startTimer();
         e.dataTransfer.setData("fromTower", towerId);
       });
@@ -203,14 +228,33 @@
       document.getElementById(`tower${towerId}`).appendChild(disc);
     }
 
+    function togglePause() {
+      if (!timerRunning && moves === 0) return; // Can't pause before game starts
+      if (!gameActive) return;
+
+      isPaused = !isPaused;
+      if (isPaused) {
+        clearInterval(timerInterval);
+        totalElapsedBeforePause += (Date.now() - startTime);
+        document.body.classList.add("paused-game");
+        document.getElementById("pauseBtn").textContent = "Resume (Space)";
+      } else {
+        startTime = Date.now();
+        startTimer(true);
+        document.body.classList.remove("paused-game");
+        document.getElementById("pauseBtn").textContent = "Pause (Space)";
+      }
+    }
+
     function executeMove(fromId, toId, isUndo = false) {
-      if (fromId === toId || isNaN(fromId)) return;
+      if (fromId === toId || isNaN(fromId) || isPaused) return;
       
       const discSize = towers[fromId][towers[fromId].length - 1];
-      const targetTowerStack = towers[toId];
-      const targetSize = targetTowerStack[targetTowerStack.length - 1];
+      const targetStack = towers[toId];
+      const targetSize = targetStack[targetStack.length - 1];
 
       if (!targetSize || discSize < targetSize) {
+        if (!timerRunning && !isUndo) startTimer();
         if (!isUndo) moveHistory.push({ from: fromId, to: toId });
         
         towers[toId].push(towers[fromId].pop());
@@ -225,12 +269,6 @@
       }
     }
 
-    function undoMove() {
-      if (moveHistory.length === 0 || !gameActive) return;
-      const lastMove = moveHistory.pop();
-      executeMove(lastMove.to, lastMove.from, true);
-    }
-
     function checkWin() {
       const n = parseInt(document.getElementById("discCount").value);
       if (towers[3].length === n) {
@@ -242,26 +280,35 @@
       }
     }
 
-    function saveRecords(n) {
-      const timeStr = document.getElementById("timer").textContent;
-      const currentTimeMs = Date.now() - startTime;
-      let records = JSON.parse(localStorage.getItem('hanoi_records') || '{}');
-      if (!records[n]) records[n] = { time: Infinity, timeStr: "--:--", moves: Infinity };
+    function applyVisualSettings() {
+      const body = document.getElementById("game-body");
+      const showNumbers = document.getElementById("checkNumbers").checked;
+      const isMono = document.getElementById("checkMono").checked;
 
-      let improved = false;
-      if (moves < records[n].moves) { records[n].moves = moves; improved = true; }
-      if (currentTimeMs < records[n].time) { 
-        records[n].time = currentTimeMs; 
-        records[n].timeStr = timeStr; 
-        improved = true; 
-      }
-
-      if (improved) {
-        localStorage.setItem('hanoi_records', JSON.stringify(records));
-        updateRecordsDisplay();
-      }
+      showNumbers ? body.classList.remove("hide-numbers") : body.classList.add("hide-numbers");
+      isMono ? body.classList.add("monochrome") : body.classList.remove("monochrome");
     }
 
+    function startTimer(resuming = false) {
+      timerRunning = true;
+      if (!resuming) startTime = Date.now();
+      timerInterval = setInterval(() => {
+        const elapsed = (Date.now() - startTime) + totalElapsedBeforePause;
+        const mins = Math.floor(elapsed / 60000).toString().padStart(2, '0');
+        const secs = Math.floor((elapsed % 60000) / 1000).toString().padStart(2, '0');
+        document.getElementById("timer").textContent = `${mins}:${secs}`;
+      }, 1000);
+    }
+
+    // Records, UI, Logic Helpers
+    function undoMove() { if (moveHistory.length > 0 && gameActive && !isPaused) { const last = moveHistory.pop(); executeMove(last.to, last.from, true); } }
+    function resetTimer() { clearInterval(timerInterval); document.getElementById("timer").textContent = "00:00"; timerRunning = false; }
+    function toggleModal() { const m = document.getElementById("settingsModal"); m.style.display = (m.style.display === "block") ? "none" : "block"; }
+    function setupDropEvents(towerEl) {
+      towerEl.addEventListener("dragover", (e) => e.preventDefault());
+      towerEl.addEventListener("drop", (e) => executeMove(parseInt(e.dataTransfer.getData("fromTower")), parseInt(towerEl.dataset.id)));
+    }
+    function updateDraggability() { [1, 2, 3].forEach(id => { const discs = document.getElementById(`tower${id}`).querySelectorAll(".disc"); discs.forEach((d, idx) => d.draggable = (idx === discs.length - 1 && gameActive)); }); }
     function updateRecordsDisplay() {
       const n = document.getElementById("discCount").value;
       const records = JSON.parse(localStorage.getItem('hanoi_records') || '{}');
@@ -269,69 +316,31 @@
       document.getElementById("recordTime").textContent = rec.timeStr;
       document.getElementById("recordMoves").textContent = rec.moves;
     }
-
-    function clearAllProgress() {
-      if(confirm("Delete all high scores?")) {
-        localStorage.removeItem('hanoi_records');
-        updateRecordsDisplay();
-        toggleModal();
-      }
+    function saveRecords(n) {
+      const timeStr = document.getElementById("timer").textContent;
+      const elapsed = (Date.now() - startTime) + totalElapsedBeforePause;
+      let records = JSON.parse(localStorage.getItem('hanoi_records') || '{}');
+      if (!records[n]) records[n] = { time: Infinity, timeStr: "--:--", moves: Infinity };
+      let improved = false;
+      if (moves < records[n].moves) { records[n].moves = moves; improved = true; }
+      if (elapsed < records[n].time) { records[n].time = elapsed; records[n].timeStr = timeStr; improved = true; }
+      if (improved) { localStorage.setItem('hanoi_records', JSON.stringify(records)); updateRecordsDisplay(); }
     }
-
-    function toggleModal() {
-      const m = document.getElementById("settingsModal");
-      m.style.display = (m.style.display === "block") ? "none" : "block";
-    }
-
-    function startTimer() {
-      timerRunning = true;
-      startTime = Date.now();
-      timerInterval = setInterval(() => {
-        const elapsed = Date.now() - startTime;
-        const mins = Math.floor(elapsed / 60000).toString().padStart(2, '0');
-        const secs = Math.floor((elapsed % 60000) / 1000).toString().padStart(2, '0');
-        document.getElementById("timer").textContent = `${mins}:${secs}`;
-      }, 1000);
-    }
-
-    function resetTimer() { 
-      clearInterval(timerInterval); 
-      document.getElementById("timer").textContent = "00:00"; 
-      timerRunning = false;
-    }
-
-    function updateDraggability() {
-      [1, 2, 3].forEach(id => {
-        const discs = document.getElementById(`tower${id}`).querySelectorAll(".disc");
-        discs.forEach((d, idx) => d.draggable = (idx === discs.length - 1 && gameActive));
-      });
-    }
-
-    function setupDropEvents(towerEl) {
-      towerEl.addEventListener("dragover", (e) => e.preventDefault());
-      towerEl.addEventListener("drop", (e) => {
-        executeMove(parseInt(e.dataTransfer.getData("fromTower")), parseInt(towerEl.dataset.id));
-      });
-    }
+    function clearAllProgress() { if(confirm("Reset all?")) { localStorage.removeItem('hanoi_records'); updateRecordsDisplay(); toggleModal(); } }
 
     window.addEventListener("keydown", (e) => {
       const key = e.key.toLowerCase();
+      if (e.code === "Space") { e.preventDefault(); togglePause(); }
+      if (isPaused) return;
       if (key === 'u') undoMove();
       if (key === 'r') init();
       if (["1", "2", "3"].includes(key) && gameActive) {
-        // START TIMER IF KEYBOARD PRESS
-        if(!timerRunning) startTimer();
         const tid = parseInt(key);
         if (selectedTower === null) {
-          if (towers[tid].length > 0) {
-            selectedTower = tid;
-            document.getElementById(`tower${tid}`).classList.add("selected");
-          }
+          if (towers[tid].length > 0) { selectedTower = tid; document.getElementById(`tower${tid}`).classList.add("selected"); }
         } else {
-          const from = selectedTower;
-          document.getElementById(`tower${from}`).classList.remove("selected");
-          selectedTower = null;
-          executeMove(from, tid);
+          const from = selectedTower; document.getElementById(`tower${from}`).classList.remove("selected");
+          selectedTower = null; executeMove(from, tid);
         }
       }
     });
