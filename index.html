@@ -2,152 +2,234 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <title>Tower of Hanoi</title>
+  <title>Interactive Tower of Hanoi</title>
   <style>
+    :root {
+      --wood: #8B4513;
+      --disc-color: #3498db;
+    }
     body {
-      font-family: Arial, sans-serif;
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
       text-align: center;
-      background: #f5f5f5;
+      background: #ecf0f1;
+      color: #2c3e50;
     }
-
-    h1 {
-      margin-top: 20px;
-    }
-
-    .controls {
-      margin: 20px;
-    }
-
+    .controls { margin: 20px; }
+    
     .tower-container {
       display: flex;
       justify-content: center;
       align-items: flex-end;
-      height: 300px;
-      gap: 50px;
+      height: 400px;
+      gap: 40px;
+      padding-top: 50px;
     }
 
+    /* The Tower (Peg + Base) */
     .tower {
-      width: 120px;
-      height: 250px;
-      border: 2px solid #333;
+      width: 160px;
+      height: 300px;
       position: relative;
       display: flex;
       flex-direction: column-reverse;
       align-items: center;
-      padding-bottom: 10px;
-      background: white;
+      cursor: pointer;
+      transition: background 0.3s;
+      border-radius: 10px 10px 0 0;
+    }
+    .tower.drag-over { background: rgba(52, 152, 219, 0.1); }
+    .tower.selected { background: rgba(241, 196, 15, 0.2); }
+
+    /* The vertical peg */
+    .tower::before {
+      content: "";
+      position: absolute;
+      bottom: 0;
+      width: 10px;
+      height: 100%;
+      background: var(--wood);
+      border-radius: 5px;
+      z-index: 1;
+    }
+    /* The horizontal base */
+    .tower::after {
+      content: "";
+      position: absolute;
+      bottom: -10px;
+      width: 180px;
+      height: 10px;
+      background: var(--wood);
+      border-radius: 5px;
     }
 
     .disc {
-      height: 20px;
-      margin: 3px 0;
-      border-radius: 5px;
-      background: steelblue;
+      height: 24px;
+      margin-bottom: 2px;
+      border-radius: 12px;
+      background: var(--disc-color);
       color: white;
       text-align: center;
-      font-size: 12px;
+      line-height: 24px;
+      font-size: 14px;
+      font-weight: bold;
+      z-index: 2;
+      box-shadow: 0 2px 4px rgba(0,0,0,0.2);
+      transition: transform 0.2s;
     }
+    .disc[draggable="true"] { cursor: grab; }
+    .disc[draggable="true"]:active { cursor: grabbing; }
 
-    button, input {
-      padding: 10px;
-      margin: 5px;
+    button {
+      padding: 10px 20px;
       font-size: 16px;
+      cursor: pointer;
+      background: #2980b9;
+      color: white;
+      border: none;
+      border-radius: 5px;
     }
+    button:hover { background: #3498db; }
+    #message { margin-top: 30px; font-weight: bold; color: #27ae60; font-size: 1.2rem; }
   </style>
 </head>
 <body>
 
   <h1>Tower of Hanoi</h1>
+  <p>Drag & Drop | Keyboard (Press 1, 2, or 3 to move)</p>
 
   <div class="controls">
     <label>Discs:</label>
-    <input type="number" id="discCount" value="3" min="1" max="8">
+    <input type="number" id="discCount" value="3" min="3" max="8">
     <button onclick="init()">Reset</button>
-    <button onclick="solve()">Solve</button>
   </div>
 
-  <div class="tower-container">
-    <div class="tower" id="A"></div>
-    <div class="tower" id="B"></div>
-    <div class="tower" id="C"></div>
+  <div class="tower-container" id="game-container">
+    <div class="tower" id="tower1" data-id="1"></div>
+    <div class="tower" id="tower2" data-id="2"></div>
+    <div class="tower" id="tower3" data-id="3"></div>
   </div>
+
+  <div id="message"></div>
 
   <script>
-    let towers = {
-      A: [],
-      B: [],
-      C: []
-    };
-
-    let moves = [];
-    let speed = 500;
+    let towers = { 1: [], 2: [], 3: [] };
+    let selectedTower = null; // For keyboard movement
 
     function init() {
-      towers = { A: [], B: [], C: [] };
-      moves = [];
+      const n = parseInt(document.getElementById("discCount").value);
+      towers = { 1: [], 2: [], 3: [] };
+      document.getElementById("message").textContent = "";
+      selectedTower = null;
 
-      document.getElementById("A").innerHTML = "";
-      document.getElementById("B").innerHTML = "";
-      document.getElementById("C").innerHTML = "";
+      [1, 2, 3].forEach(id => {
+        const el = document.getElementById(`tower${id}`);
+        el.innerHTML = "";
+        el.classList.remove("selected");
+        setupDropEvents(el);
+      });
 
-      let n = parseInt(document.getElementById("discCount").value);
+      // Colors for variety
+      const colors = ['#e74c3c', '#e67e22', '#f1c40f', '#2ecc71', '#3498db', '#9b59b6', '#34495e', '#16a085'];
 
       for (let i = n; i >= 1; i--) {
-        towers.A.push(i);
-        drawDisc("A", i, n);
+        towers[1].push(i);
+        createDiscElement(1, i, n, colors[i-1]);
       }
+      updateDraggability();
     }
 
-    function drawDisc(tower, size, max) {
-      let disc = document.createElement("div");
+    function createDiscElement(towerId, size, max, color) {
+      const disc = document.createElement("div");
       disc.className = "disc";
-      disc.style.width = (size / max * 100) + "%";
+      disc.id = "disc-" + size;
+      disc.style.width = (30 + (size / max * 70)) + "%";
+      disc.style.backgroundColor = color;
       disc.textContent = size;
-      document.getElementById(tower).appendChild(disc);
+      disc.dataset.size = size;
+      
+      disc.draggable = false; // Set by updateDraggability
+      disc.addEventListener("dragstart", (e) => {
+        e.dataTransfer.setData("fromTower", towerId);
+        e.dataTransfer.setData("discSize", size);
+      });
+
+      document.getElementById(`tower${towerId}`).appendChild(disc);
     }
 
-    function moveDisc(from, to) {
-      let disc = towers[from].pop();
-      towers[to].push(disc);
-
-      let fromDiv = document.getElementById(from);
-      let toDiv = document.getElementById(to);
-
-      let discElem = fromDiv.lastChild;
-      toDiv.appendChild(discElem);
+    function updateDraggability() {
+      // Only the top disc of each tower is draggable
+      [1, 2, 3].forEach(id => {
+        const towerDiv = document.getElementById(`tower${id}`);
+        const discs = towerDiv.querySelectorAll(".disc");
+        discs.forEach((d, idx) => {
+          d.draggable = (idx === discs.length - 1);
+        });
+      });
     }
 
-    function hanoi(n, from, to, aux) {
-      if (n === 1) {
-        moves.push([from, to]);
-        return;
+    function setupDropEvents(towerEl) {
+      towerEl.addEventListener("dragover", (e) => e.preventDefault());
+      towerEl.addEventListener("dragenter", () => towerEl.classList.add("drag-over"));
+      towerEl.addEventListener("dragleave", () => towerEl.classList.remove("drag-over"));
+      
+      towerEl.addEventListener("drop", (e) => {
+        towerEl.classList.remove("drag-over");
+        const fromTowerId = parseInt(e.dataTransfer.getData("fromTower"));
+        const toTowerId = parseInt(towerEl.dataset.id);
+        executeMove(fromTowerId, toTowerId);
+      });
+    }
+
+    function executeMove(fromId, toId) {
+      if (fromId === toId) return;
+      
+      const discSize = towers[fromId][towers[fromId].length - 1];
+      const targetTowerSize = towers[toId][towers[toId].length - 1];
+
+      // Validation: Is the move legal?
+      if (!targetTowerSize || discSize < targetTowerSize) {
+        towers[toId].push(towers[fromId].pop());
+        const discElem = document.getElementById(`disc-${discSize}`);
+        document.getElementById(`tower${toId}`).appendChild(discElem);
+        updateDraggability();
+        checkWin();
+      } else {
+        alert("Invalid Move! You cannot place a larger disc on a smaller one.");
       }
-      hanoi(n - 1, from, aux, to);
-      moves.push([from, to]);
-      hanoi(n - 1, aux, to, from);
     }
 
-    function solve() {
-      let n = parseInt(document.getElementById("discCount").value);
-      moves = [];
+    function checkWin() {
+      const n = parseInt(document.getElementById("discCount").value);
+      if (towers[3].length === n) {
+        document.getElementById("message").textContent = "🎉 You Won! Amazing job!";
+        // Make all discs non-draggable
+        document.querySelectorAll(".disc").forEach(d => d.draggable = false);
+      }
+    }
 
-      hanoi(n, "A", "C", "B");
-
-      let i = 0;
-      let interval = setInterval(() => {
-        if (i >= moves.length) {
-          clearInterval(interval);
-          return;
+    // Keyboard Logic
+    window.addEventListener("keydown", (e) => {
+      const key = e.key;
+      if (["1", "2", "3"].includes(key)) {
+        const towerId = parseInt(key);
+        
+        if (selectedTower === null) {
+          // First press: selecting the "From" tower
+          if (towers[towerId].length > 0) {
+            selectedTower = towerId;
+            document.getElementById(`tower${towerId}`).classList.add("selected");
+          }
+        } else {
+          // Second press: selecting the "To" tower
+          const fromId = selectedTower;
+          document.getElementById(`tower${fromId}`).classList.remove("selected");
+          selectedTower = null;
+          executeMove(fromId, towerId);
         }
-        let [from, to] = moves[i];
-        moveDisc(from, to);
-        i++;
-      }, speed);
-    }
+      }
+    });
 
-    // Initialize on load
     init();
   </script>
-
 </body>
 </html>
