@@ -267,7 +267,7 @@
 
     async function autoSolve() {
       if(!gameActive || isSolving) return;
-      if(!confirm("Auto-solve will not count towards personal records. Also remember to choose speed of autosolve- slow, medium, fast")) return;
+      if(!confirm("Auto-solve will not count towards personal records.")) return;
       init(); 
       isSolving = true;
       gameActive = false;
