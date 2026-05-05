@@ -2,13 +2,14 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <title>Tower of Hanoi - Pro</title>
+  <title>Tower of Hanoi - Ultimate</title>
   <style>
     :root {
       --wood: #5d4037;
       --bg-color: #0a192f;
       --text-color: #64ffda;
       --accent: #112240;
+      --gold: #f1c40f;
     }
     body {
       font-family: 'Courier New', Courier, monospace;
@@ -16,88 +17,87 @@
       background: var(--bg-color);
       color: var(--text-color);
       margin: 0;
-      overflow-x: hidden;
+      overflow: hidden;
     }
-    h1 { margin-top: 20px; text-transform: uppercase; letter-spacing: 3px; }
+    h1 { margin-top: 15px; text-transform: uppercase; letter-spacing: 3px; font-size: 1.5rem; }
 
     .stats-container {
       display: flex;
       justify-content: center;
-      gap: 30px;
+      gap: 20px;
       margin: 10px;
-      font-size: 1.1rem;
+      font-size: 0.9rem;
     }
+    .records { color: var(--gold); margin-bottom: 10px; }
 
-    .controls { margin: 20px; padding: 15px; background: var(--accent); border-radius: 8px; display: inline-block; }
+    .controls { margin: 10px; padding: 10px; background: var(--accent); border-radius: 8px; display: inline-block; }
     
     .tower-container {
       display: flex;
       justify-content: center;
       align-items: flex-end;
-      height: 500px; /* Taller area for more rings */
+      height: 450px;
       gap: 60px;
       padding-bottom: 50px;
-      margin-top: 40px; /* Moved lower down */
+      margin-top: 20px;
     }
 
     .tower {
-      width: 180px;
-      height: 400px;
+      width: 160px;
+      height: 380px;
       position: relative;
       display: flex;
       flex-direction: column-reverse;
       align-items: center;
       cursor: pointer;
-      border-radius: 10px 10px 0 0;
+      border-radius: 10px;
+      transition: background 0.2s;
     }
-    .tower.selected { background: rgba(100, 255, 218, 0.1); border-radius: 10px; }
+    .tower.selected { background: rgba(100, 255, 218, 0.15); }
 
     .tower::before {
       content: "";
-      position: absolute;
-      bottom: 0;
-      width: 12px;
-      height: 100%;
-      background: var(--wood);
-      border-radius: 6px;
-      z-index: 1;
+      position: absolute; bottom: 0; width: 12px; height: 100%;
+      background: var(--wood); border-radius: 6px; z-index: 1;
     }
     .tower::after {
       content: "";
-      position: absolute;
-      bottom: -15px;
-      width: 200px;
-      height: 15px;
-      background: var(--wood);
-      border-radius: 5px;
+      position: absolute; bottom: -15px; width: 180px; height: 15px;
+      background: var(--wood); border-radius: 5px;
     }
 
     .disc {
-      height: 22px;
-      margin-bottom: 2px;
-      border-radius: 5px;
-      color: #0a192f;
-      text-align: center;
-      line-height: 22px;
-      font-size: 12px;
-      font-weight: bold;
-      z-index: 2;
+      height: 20px; margin-bottom: 2px; border-radius: 4px;
+      color: #0a192f; text-align: center; line-height: 20px;
+      font-size: 11px; font-weight: bold; z-index: 2;
       box-shadow: 0 2px 5px rgba(0,0,0,0.5);
-      transition: transform 0.1s, background 0.3s;
     }
 
     button, input {
-      background: transparent;
-      border: 1px solid var(--text-color);
-      color: var(--text-color);
-      padding: 8px 15px;
-      border-radius: 4px;
-      cursor: pointer;
+      background: transparent; border: 1px solid var(--text-color);
+      color: var(--text-color); padding: 5px 12px; border-radius: 4px; cursor: pointer;
     }
     button:hover { background: var(--text-color); color: var(--bg-color); }
     
-    #timer { position: fixed; top: 20px; right: 20px; font-size: 1.5rem; color: #f1c40f; }
-    #message { margin-top: 20px; font-size: 1.5rem; height: 30px; }
+    #timer { position: fixed; top: 20px; right: 20px; font-size: 1.2rem; color: var(--gold); }
+    #message { margin-top: 15px; font-size: 1.2rem; height: 25px; color: var(--gold); }
+
+    /* Modal Styling */
+    #settingsModal {
+      display: none; position: fixed; z-index: 10; left: 0; top: 0;
+      width: 100%; height: 100%; background-color: rgba(0,0,0,0.8);
+    }
+    .modal-content {
+      background-color: var(--accent); margin: 10% auto; padding: 20px;
+      border: 1px solid var(--text-color); width: 400px; border-radius: 10px;
+      position: relative; text-align: left;
+    }
+    .close-btn {
+      position: absolute; top: 10px; right: 15px; font-size: 24px;
+      cursor: pointer; color: var(--text-color);
+    }
+    .reset-all { border-color: #ff4d4d; color: #ff4d4d; margin-top: 20px; width: 100%; }
+    .reset-all:hover { background: #ff4d4d; color: white; }
   </style>
 </head>
 <body>
@@ -106,15 +106,22 @@
 
   <h1>Tower of Hanoi</h1>
 
+  <div class="records">
+    🏆 Best Time: <span id="recordTime">--:--</span> | 
+    Best Moves: <span id="recordMoves">--</span>
+  </div>
+
   <div class="stats-container">
     <div>Moves: <span id="moveCount">0</span></div>
     <div>Ideal: <span id="idealMoves">0</span></div>
   </div>
 
   <div class="controls">
-    <label>Discs (Max 15):</label>
+    <label>Discs:</label>
     <input type="number" id="discCount" value="3" min="3" max="15">
-    <button onclick="init()">Restart</button>
+    <button onclick="init()">Restart (R)</button>
+    <button onclick="undoMove()">Undo (U)</button>
+    <button onclick="toggleModal()">Settings</button>
   </div>
 
   <div class="tower-container" id="game-container">
@@ -125,23 +132,40 @@
 
   <div id="message"></div>
 
+  <div id="settingsModal">
+    <div class="modal-content">
+      <span class="close-btn" onclick="toggleModal()">&times;</span>
+      <h3>Game Controls</h3>
+      <ul>
+        <li><strong>Numbers 1, 2, 3:</strong> Select/Move Towers</li>
+        <li><strong>U Key:</strong> Undo last move</li>
+        <li><strong>R Key:</strong> Restart level</li>
+        <li><strong>Drag & Drop:</strong> Use mouse to move rings</li>
+      </ul>
+      <p><small>Records are saved per disc count level.</small></p>
+      <button class="reset-all" onclick="clearAllProgress()">RESET ALL PROGRESS</button>
+    </div>
+  </div>
+
   <script>
     let towers = { 1: [], 2: [], 3: [] };
+    let moveHistory = [];
     let selectedTower = null;
     let moves = 0;
-    let startTime;
-    let timerInterval;
+    let startTime, timerInterval;
     let gameActive = false;
 
     function init() {
       const n = Math.min(parseInt(document.getElementById("discCount").value), 15);
       towers = { 1: [], 2: [], 3: [] };
+      moveHistory = [];
       moves = 0;
       gameActive = true;
       document.getElementById("moveCount").textContent = "0";
       document.getElementById("message").textContent = "";
       document.getElementById("idealMoves").textContent = Math.pow(2, n) - 1;
       
+      updateRecordsDisplay();
       resetTimer();
       startTimer();
 
@@ -163,11 +187,9 @@
       const disc = document.createElement("div");
       disc.className = "disc";
       disc.id = "disc-" + size;
-      // Dynamic sizing for up to 15 rings
-      disc.style.width = (20 + (size / max * 80)) + "%";
-      // Gradient of colors based on size
-      const hue = (size * 25) % 360;
-      disc.style.background = `hsl(${hue}, 70%, 60%)`;
+      disc.style.width = (25 + (size / max * 70)) + "%";
+      const hue = (size * 20) % 360;
+      disc.style.background = `hsl(${hue}, 60%, 50%)`;
       disc.dataset.size = size;
       
       disc.addEventListener("dragstart", (e) => {
@@ -178,38 +200,21 @@
       document.getElementById(`tower${towerId}`).appendChild(disc);
     }
 
-    function updateDraggability() {
-      [1, 2, 3].forEach(id => {
-        const discs = document.getElementById(`tower${id}`).querySelectorAll(".disc");
-        discs.forEach((d, idx) => {
-          d.draggable = (idx === discs.length - 1 && gameActive);
-        });
-      });
-    }
-
-    function setupDropEvents(towerEl) {
-      towerEl.addEventListener("dragover", (e) => e.preventDefault());
-      towerEl.addEventListener("drop", (e) => {
-        const fromTowerId = parseInt(e.dataTransfer.getData("fromTower"));
-        const toTowerId = parseInt(towerEl.dataset.id);
-        executeMove(fromTowerId, toTowerId);
-      });
-    }
-
-    function executeMove(fromId, toId) {
+    function executeMove(fromId, toId, isUndo = false) {
       if (fromId === toId || isNaN(fromId)) return;
       
       const discSize = towers[fromId][towers[fromId].length - 1];
       const targetTowerStack = towers[toId];
-      const targetTowerSize = targetTowerStack[targetTowerStack.length - 1];
+      const targetSize = targetTowerStack[targetTowerStack.length - 1];
 
-      // Pure logic: if illegal, just do nothing
-      if (!targetTowerSize || discSize < targetTowerSize) {
+      if (!targetSize || discSize < targetSize) {
+        if (!isUndo) moveHistory.push({ from: fromId, to: toId });
+        
         towers[toId].push(towers[fromId].pop());
         const discElem = document.getElementById(`disc-${discSize}`);
         document.getElementById(`tower${toId}`).appendChild(discElem);
         
-        moves++;
+        moves += isUndo ? -1 : 1;
         document.getElementById("moveCount").textContent = moves;
         
         updateDraggability();
@@ -217,17 +222,66 @@
       }
     }
 
+    function undoMove() {
+      if (moveHistory.length === 0 || !gameActive) return;
+      const lastMove = moveHistory.pop();
+      executeMove(lastMove.to, lastMove.from, true);
+    }
+
     function checkWin() {
       const n = parseInt(document.getElementById("discCount").value);
       if (towers[3].length === n) {
         gameActive = false;
         clearInterval(timerInterval);
-        document.getElementById("message").textContent = "MISSION COMPLETE";
-        updateDraggability();
+        document.getElementById("message").textContent = "LEVEL COMPLETE!";
+        saveRecords(n);
       }
     }
 
-    // Timer logic
+    // Records Logic (LocalStorage)
+    function saveRecords(n) {
+      const timeStr = document.getElementById("timer").textContent;
+      const currentTimeMs = Date.now() - startTime;
+      
+      let records = JSON.parse(localStorage.getItem('hanoi_records') || '{}');
+      if (!records[n]) records[n] = { time: Infinity, timeStr: "--:--", moves: Infinity };
+
+      let improved = false;
+      if (moves < records[n].moves) { records[n].moves = moves; improved = true; }
+      if (currentTimeMs < records[n].time) { 
+        records[n].time = currentTimeMs; 
+        records[n].timeStr = timeStr; 
+        improved = true; 
+      }
+
+      if (improved) {
+        localStorage.setItem('hanoi_records', JSON.stringify(records));
+        updateRecordsDisplay();
+      }
+    }
+
+    function updateRecordsDisplay() {
+      const n = document.getElementById("discCount").value;
+      const records = JSON.parse(localStorage.getItem('hanoi_records') || '{}');
+      const rec = records[n] || { timeStr: "--:--", moves: "--" };
+      document.getElementById("recordTime").textContent = rec.timeStr;
+      document.getElementById("recordMoves").textContent = rec.moves;
+    }
+
+    function clearAllProgress() {
+      if(confirm("Delete all high scores?")) {
+        localStorage.removeItem('hanoi_records');
+        updateRecordsDisplay();
+        toggleModal();
+      }
+    }
+
+    // UI Helpers
+    function toggleModal() {
+      const m = document.getElementById("settingsModal");
+      m.style.display = (m.style.display === "block") ? "none" : "block";
+    }
+
     function startTimer() {
       startTime = Date.now();
       timerInterval = setInterval(() => {
@@ -238,27 +292,38 @@
       }, 1000);
     }
 
-    function resetTimer() {
-      clearInterval(timerInterval);
-      document.getElementById("timer").textContent = "00:00";
+    function resetTimer() { clearInterval(timerInterval); document.getElementById("timer").textContent = "00:00"; }
+
+    function updateDraggability() {
+      [1, 2, 3].forEach(id => {
+        const discs = document.getElementById(`tower${id}`).querySelectorAll(".disc");
+        discs.forEach((d, idx) => d.draggable = (idx === discs.length - 1 && gameActive));
+      });
     }
 
-    // Keyboard Logic
+    function setupDropEvents(towerEl) {
+      towerEl.addEventListener("dragover", (e) => e.preventDefault());
+      towerEl.addEventListener("drop", (e) => {
+        executeMove(parseInt(e.dataTransfer.getData("fromTower")), parseInt(towerEl.dataset.id));
+      });
+    }
+
     window.addEventListener("keydown", (e) => {
-      if(!gameActive) return;
-      const key = e.key;
-      if (["1", "2", "3"].includes(key)) {
-        const towerId = parseInt(key);
+      const key = e.key.toLowerCase();
+      if (key === 'u') undoMove();
+      if (key === 'r') init();
+      if (["1", "2", "3"].includes(key) && gameActive) {
+        const tid = parseInt(key);
         if (selectedTower === null) {
-          if (towers[towerId].length > 0) {
-            selectedTower = towerId;
-            document.getElementById(`tower${towerId}`).classList.add("selected");
+          if (towers[tid].length > 0) {
+            selectedTower = tid;
+            document.getElementById(`tower${tid}`).classList.add("selected");
           }
         } else {
-          const fromId = selectedTower;
-          document.getElementById(`tower${fromId}`).classList.remove("selected");
+          const from = selectedTower;
+          document.getElementById(`tower${from}`).classList.remove("selected");
           selectedTower = null;
-          executeMove(fromId, towerId);
+          executeMove(from, tid);
         }
       }
     });
