@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <title>Tower of Hanoi - Pro Edition</title>
+  <title>Tower of Hanoi - Grand Master</title>
   <style>
     :root {
       --wood: #5d4037;
@@ -15,75 +15,115 @@
     }
     body {
       font-family: 'Courier New', Courier, monospace;
-      text-align: center;
       background: var(--bg-color);
       color: var(--text-color);
       margin: 0;
       display: flex;
       flex-direction: column;
-      height: 100vh;
-      overflow: hidden;
+      align-items: center;
+      min-height: 100vh;
+      overflow-y: auto;
+      padding-bottom: 50px;
     }
-    h1 { margin: 10px 0; text-transform: uppercase; letter-spacing: 3px; font-size: 1.5rem; }
+    h1 { 
+      margin: 30px 0 10px 0; 
+      text-transform: uppercase; 
+      letter-spacing: 8px; 
+      font-size: 3.5rem; /* Bigger Title */
+      text-shadow: 0 0 10px rgba(100, 255, 218, 0.3);
+    }
 
-    .main-layout { display: flex; justify-content: center; align-items: flex-start; gap: 20px; padding: 0 20px; flex-grow: 1; }
+    .main-wrapper {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      width: 100%;
+      max-width: 1200px;
+    }
 
-    /* Medals Side Panel */
+    .game-section {
+      display: flex;
+      justify-content: center;
+      align-items: flex-start;
+      gap: 30px;
+      margin-bottom: 40px;
+    }
+
+    /* Side Panel */
     .side-panel {
-      width: 260px;
+      width: 240px;
       background: var(--accent);
       padding: 15px;
       border-radius: 10px;
       text-align: left;
-      font-size: 0.8rem;
+      font-size: 0.85rem;
       border: 1px solid var(--text-color);
-      box-shadow: 0 4px 15px rgba(0,0,0,0.5);
     }
-    .medal-item { margin: 10px 0; display: flex; justify-content: space-between; }
-    .gold-txt { color: var(--gold); }
-    .silver-txt { color: var(--silver); }
-    .bronze-txt { color: var(--bronze); }
-
-    .controls { margin: 10px; padding: 12px; background: var(--accent); border-radius: 8px; z-index: 10; position: relative; }
+    .medal-item { margin: 8px 0; display: flex; justify-content: space-between; }
+    
+    .controls { 
+      margin: 20px 0; 
+      padding: 15px 25px; 
+      background: var(--accent); 
+      border-radius: 12px; 
+      border: 1px solid rgba(100, 255, 218, 0.2);
+    }
     
     .tower-container {
       display: flex;
       justify-content: center;
       align-items: flex-end;
       height: 400px;
-      gap: 50px;
-      padding-bottom: 40px;
+      gap: 60px;
+      padding: 0 40px 40px 40px;
       transition: filter 0.3s, opacity 0.3s;
-      margin-top: 20px;
     }
 
     .paused-game .tower-container { opacity: 0.1; pointer-events: none; }
-    .blindfolded .tower-container { filter: brightness(0); background: black; }
+    .blindfolded .tower-container { filter: brightness(0); background: black; border-radius: 20px; }
     .blindfolded .tower-container:hover { filter: brightness(0.15); }
 
     .tower {
-      width: 140px; height: 350px; position: relative;
+      width: 150px; height: 350px; position: relative;
       display: flex; flex-direction: column-reverse; align-items: center; cursor: pointer;
     }
-    .tower.selected { background: rgba(100, 255, 218, 0.1); border-radius: 10px; }
-    .tower::before { content: ""; position: absolute; bottom: 0; width: 10px; height: 100%; background: var(--wood); border-radius: 5px; z-index: 1; }
-    .tower::after { content: ""; position: absolute; bottom: -15px; width: 160px; height: 12px; background: var(--wood); border-radius: 5px; }
+    .tower.selected { background: rgba(100, 255, 218, 0.1); border-radius: 15px; }
+    .tower::before { content: ""; position: absolute; bottom: 0; width: 12px; height: 100%; background: var(--wood); border-radius: 6px; z-index: 1; }
+    .tower::after { content: ""; position: absolute; bottom: -15px; width: 180px; height: 15px; background: var(--wood); border-radius: 5px; }
 
-    .disc { height: 20px; margin-bottom: 2px; border-radius: 4px; color: #0a192f; text-align: center; line-height: 20px; font-size: 11px; font-weight: bold; z-index: 2; box-shadow: 0 2px 4px rgba(0,0,0,0.3); }
+    .disc { height: 22px; margin-bottom: 2px; border-radius: 5px; color: #0a192f; text-align: center; line-height: 22px; font-size: 12px; font-weight: bold; z-index: 2; cursor: grab; }
     .hide-numbers .disc { color: transparent; }
     .monochrome .disc { background: #ccd6f6 !important; color: #0a192f !important; border: 1px solid #8892b0; }
 
-    button, input { background: transparent; border: 1px solid var(--text-color); color: var(--text-color); padding: 5px 10px; border-radius: 4px; cursor: pointer; margin: 2px; }
+    button, input, select { 
+      background: transparent; border: 1px solid var(--text-color); 
+      color: var(--text-color); padding: 6px 12px; border-radius: 4px; 
+      cursor: pointer; margin: 0 4px; font-family: inherit;
+    }
     button:hover { background: var(--text-color); color: var(--bg-color); }
-    button:disabled { border-color: #333; color: #333; cursor: not-allowed; }
+    select option { background: var(--accent); color: var(--text-color); }
     
-    #timer { position: fixed; top: 20px; right: 20px; font-size: 1.2rem; color: var(--gold); }
-    #message { margin-top: 10px; font-size: 1.1rem; height: 25px; color: var(--gold); font-weight: bold; }
+    #timer { position: fixed; top: 25px; right: 40px; font-size: 1.8rem; color: var(--gold); font-weight: bold; }
+    #message { margin: 15px 0; font-size: 1.4rem; color: var(--gold); font-weight: bold; min-height: 30px; }
+
+    /* Leaderboard Table */
+    .leaderboard {
+      width: 80%;
+      max-width: 800px;
+      background: var(--accent);
+      border-collapse: collapse;
+      margin-top: 20px;
+      border-radius: 10px;
+      overflow: hidden;
+      border: 1px solid rgba(100, 255, 218, 0.2);
+    }
+    .leaderboard th, .leaderboard td { padding: 12px; text-align: center; border-bottom: 1px solid #233554; }
+    .leaderboard th { background: #172a45; color: var(--gold); text-transform: uppercase; font-size: 0.8rem; }
+    .leaderboard tr:hover { background: rgba(100, 255, 218, 0.05); }
 
     #settingsModal { display: none; position: fixed; z-index: 1000; left: 0; top: 0; width: 100%; height: 100%; background-color: rgba(0,0,0,0.8); }
-    .modal-content { background-color: var(--accent); margin: 5% auto; padding: 20px; border: 1px solid var(--text-color); width: 400px; border-radius: 10px; position: relative; text-align: left; }
+    .modal-content { background-color: var(--accent); margin: 10% auto; padding: 30px; border: 1px solid var(--text-color); width: 400px; border-radius: 10px; position: relative; text-align: left; }
     .close-btn { position: absolute; top: 10px; right: 15px; font-size: 24px; cursor: pointer; color: var(--text-color); }
-    .setting-row { margin: 15px 0; display: flex; align-items: center; justify-content: space-between; }
   </style>
 </head>
 <body id="game-body">
@@ -91,66 +131,78 @@
   <div id="timer">00:00</div>
   <h1>Tower of Hanoi</h1>
 
-  <div class="main-layout">
-    <div class="side-panel">
-      <h3 style="margin-top:0; border-bottom:1px solid #64ffda; padding-bottom: 5px;">Target Medals</h3>
-      <div class="medal-item gold-txt"><span>🥇 Gold (Perfect):</span> <span id="targetGoldMoves">--</span>m</div>
-      <div class="medal-item silver-txt"><span>🥈 Silver:</span> <span id="targetSilverMoves">--</span>m</div>
-      <div class="medal-item bronze-txt"><span>🥉 Bronze:</span> <span id="targetBronzeMoves">--</span>m</div>
-      <hr style="border: 0.5px solid #233554;">
-      <div class="medal-item gold-txt"><span>🥇 Gold Time:</span> <span id="targetGoldTime">--</span></div>
-      <div class="medal-item silver-txt"><span>🥈 Silver Time:</span> <span id="targetSilverTime">--</span></div>
-      <div class="medal-item bronze-txt"><span>🥉 Bronze Time:</span> <span id="targetBronzeTime">--</span></div>
-      <hr style="border: 0.5px solid #233554;">
-      <div style="font-size: 0.75rem; color: #8892b0;">World Record (<span id="wrDiscCount">3</span> rings):<br><span id="worldRecord" style="color: var(--gold);">--</span></div>
-    </div>
-
-    <div>
-      <div class="records" style="color: var(--gold); margin-bottom: 5px;">
-        🏆 Personal Best: <span id="recordTime">--:--</span> / <span id="recordMoves">--</span> moves
-      </div>
-      <div class="stats-container">
-        <div style="font-size: 1.2rem;">Moves: <span id="moveCount">0</span></div>
-      </div>
-      <div class="controls">
-        <label>Rings: </label>
-        <input type="number" id="discCount" value="3" min="3" max="15" style="width:45px;" onkeydown="if(event.key==='Enter') init()">
-        <span style="font-size: 0.7rem; margin-right: 5px;">(Max 15)</span>
-        <button onclick="init()">Restart (R)</button>
-        <button onclick="togglePause()" id="pauseBtn">Pause (Space)</button>
-        <button onclick="undoMove()">Undo (U)</button>
-        <button onclick="autoSolve()" id="solveBtn">Auto-Solve</button>
-        <button onclick="toggleModal()">Settings</button>
+  <div class="main-wrapper">
+    <div class="game-section">
+      <div class="side-panel">
+        <h3 style="margin-top:0; border-bottom:1px solid #64ffda; padding-bottom:5px;">Level Goals</h3>
+        <div class="medal-item" style="color:var(--gold)"><span>🥇 Gold:</span> <span id="targetGoldMoves">--</span>m</div>
+        <div class="medal-item" style="color:var(--silver)"><span>🥈 Silver:</span> <span id="targetSilverMoves">--</span>m</div>
+        <div class="medal-item" style="color:var(--bronze)"><span>🥉 Bronze:</span> <span id="targetBronzeMoves">--</span>m</div>
+        <hr style="border:0.5px solid #233554;">
+        <div class="medal-item" style="color:var(--gold)"><span>🥇 Gold Time:</span> <span id="targetGoldTime">--</span></div>
+        <div class="medal-item" style="color:var(--silver)"><span>🥈 Silver Time:</span> <span id="targetSilverTime">--</span></div>
+        <div class="medal-item" style="color:var(--bronze)"><span>🥉 Bronze Time:</span> <span id="targetBronzeTime">--</span></div>
+        <hr style="border:0.5px solid #233554;">
+        <div style="font-size:0.75rem; color:#8892b0;">World Record (<span id="wrCount">3</span> rings):<br><span id="worldRecord" style="color:var(--gold)">--</span></div>
       </div>
 
-      <div class="tower-container" id="game-container">
-        <div class="tower" id="tower1" data-id="1"></div>
-        <div class="tower" id="tower2" data-id="2"></div>
-        <div class="tower" id="tower3" data-id="3"></div>
+      <div style="display:flex; flex-direction:column; align-items:center;">
+        <div class="controls">
+          <label>Rings: </label>
+          <input type="number" id="discCount" value="3" min="3" max="15" style="width:50px;" onkeydown="if(event.key==='Enter') init()">
+          <button onclick="init()">Restart (R)</button>
+          <button onclick="togglePause()" id="pauseBtn">Pause (Space)</button>
+          <button onclick="undoMove()">Undo (U)</button>
+          <button onclick="toggleModal()">Settings</button>
+        </div>
+
+        <div class="tower-container" id="game-container">
+          <div class="tower" id="tower1" data-id="1"></div>
+          <div class="tower" id="tower2" data-id="2"></div>
+          <div class="tower" id="tower3" data-id="3"></div>
+        </div>
+
+        <div id="message"></div>
+
+        <div class="controls" style="margin-top: 0;">
+          <label>Auto-Solve: </label>
+          <select id="solveSpeed">
+            <option value="500">Slow</option>
+            <option value="250" selected>Medium</option>
+            <option value="50">Fast</option>
+            <option value="5">Instantish</option>
+          </select>
+          <button onclick="autoSolve()" id="solveBtn">Start Solving</button>
+          <div style="display:inline-block; margin-left:20px;">Moves: <span id="moveCount" style="color:var(--gold)">0</span></div>
+        </div>
       </div>
-      <div id="message"></div>
     </div>
+
+    <h2 style="color:var(--gold); letter-spacing:3px;">Global Records</h2>
+    <table class="leaderboard">
+      <thead>
+        <tr>
+          <th>Rings</th>
+          <th>Best Moves</th>
+          <th>Best Time</th>
+          <th>Status</th>
+        </tr>
+      </thead>
+      <tbody id="recordTableBody">
+        </tbody>
+    </table>
   </div>
 
   <div id="settingsModal">
     <div class="modal-content">
       <span class="close-btn" onclick="toggleModal()">&times;</span>
-      <h3>Game Settings</h3>
-      <div class="setting-row">
-        <label>Show Ring Numbers</label>
-        <input type="checkbox" id="checkNumbers" checked onchange="applyVisualSettings()">
+      <h3>Configuration</h3>
+      <div style="display:flex; flex-direction:column; gap:15px;">
+        <label><input type="checkbox" id="checkNumbers" checked onchange="applyVisualSettings()"> Show Ring Numbers</label>
+        <label><input type="checkbox" id="checkMono" onchange="applyVisualSettings()"> Monochrome Mode</label>
+        <label style="color:#ff4d4d;"><input type="checkbox" id="checkBlind" onchange="applyVisualSettings()"> BLINDFOLD MODE</label>
       </div>
-      <div class="setting-row">
-        <label>Monochrome Mode</label>
-        <input type="checkbox" id="checkMono" onchange="applyVisualSettings()">
-      </div>
-      <div class="setting-row" style="color: #ff4d4d; font-weight: bold;">
-        <label>BLINDFOLD MODE 🕶️</label>
-        <input type="checkbox" id="checkBlind" onchange="applyVisualSettings()">
-      </div>
-      <hr style="border: 0.5px solid #233554;">
-      <p style="font-size: 0.8rem;">Controls: 1-3 keys to move, U to undo, R to restart, Space to pause.</p>
-      <button style="width:100%; margin-top:10px; border-color:red; color:red;" onclick="clearAllProgress()">RESET ALL DATA</button>
+      <button style="width:100%; margin-top:25px; border-color:#ff4d4d; color:#ff4d4d;" onclick="clearAllProgress()">WIPE ALL RECORDS</button>
     </div>
   </div>
 
@@ -167,7 +219,7 @@
     };
 
     function init() {
-      if(isSolving) isSolving = false; 
+      isSolving = false;
       const n = Math.min(parseInt(document.getElementById("discCount").value), 15);
       document.getElementById("discCount").value = n;
       towers = { 1: [], 2: [], 3: [] }; moveHistory = []; moves = 0;
@@ -198,14 +250,12 @@
       document.getElementById("targetGoldMoves").textContent = perfect;
       document.getElementById("targetSilverMoves").textContent = Math.ceil(perfect * 1.2);
       document.getElementById("targetBronzeMoves").textContent = Math.ceil(perfect * 1.5);
-      
-      const goldSeconds = Math.ceil(perfect / 1.8);
+      const goldSeconds = Math.ceil(perfect / 2);
       document.getElementById("targetGoldTime").textContent = goldSeconds + "s";
       document.getElementById("targetSilverTime").textContent = Math.ceil(goldSeconds * 1.6) + "s";
       document.getElementById("targetBronzeTime").textContent = Math.ceil(goldSeconds * 2.5) + "s";
-      
-      document.getElementById("wrDiscCount").textContent = n;
-      document.getElementById("worldRecord").textContent = (worldRecords[n] || "N/A");
+      document.getElementById("wrCount").textContent = n;
+      document.getElementById("worldRecord").textContent = worldRecords[n] || "N/A";
     }
 
     function createDiscElement(towerId, size, max) {
@@ -225,7 +275,7 @@
     }
 
     function executeMove(fromId, toId, isUndo = false) {
-      if (fromId === toId || isNaN(fromId) || isPaused) return;
+      if (fromId === toId || isPaused) return;
       const discSize = towers[fromId][towers[fromId].length - 1];
       const targetStack = towers[toId];
       const targetSize = targetStack[targetStack.length - 1];
@@ -244,12 +294,10 @@
 
     async function autoSolve() {
       if(!gameActive || isSolving) return;
-      if(!confirm("Auto-solve will not count towards records. Start?")) return;
       init(); 
-      isSolving = true;
-      gameActive = false;
+      isSolving = true; gameActive = false;
       document.getElementById("solveBtn").disabled = true;
-      const n = parseInt(document.getElementById("discCount").value);
+      const speed = parseInt(document.getElementById("solveSpeed").value);
       const movesList = [];
       function hanoi(n, from, to, aux) {
         if (n === 1) { movesList.push([from, to]); return; }
@@ -257,14 +305,14 @@
         movesList.push([from, to]);
         hanoi(n - 1, aux, to, from);
       }
-      hanoi(n, 1, 3, 2);
+      hanoi(parseInt(document.getElementById("discCount").value), 1, 3, 2);
       for (let move of movesList) {
         if (!isSolving) break;
         executeMove(move[0], move[1]);
-        await new Promise(r => setTimeout(r, n > 7 ? 50 : 250));
+        await new Promise(r => setTimeout(r, speed));
       }
       isSolving = false;
-      document.getElementById("message").textContent = "AI SOLUTION FINISHED";
+      document.getElementById("message").textContent = "AI FINISHED";
     }
 
     function checkWin() {
@@ -272,9 +320,9 @@
       if (towers[3].length === n) {
         gameActive = false; timerRunning = false;
         clearInterval(timerInterval);
-        const elapsed = ((Date.now() - startTime) + totalElapsedBeforePause) / 1000;
         if (!isSolving) {
-            document.getElementById("message").textContent = "WIN! " + getMedalStatus(moves, elapsed);
+            const elapsed = ((Date.now() - startTime) + totalElapsedBeforePause) / 1000;
+            document.getElementById("message").textContent = "🏆 VICTORY!";
             saveRecords(n);
         }
         document.getElementById("checkBlind").checked = false;
@@ -282,11 +330,43 @@
       }
     }
 
-    function getMedalStatus(m, s) {
-      const perfect = Math.pow(2, parseInt(document.getElementById("discCount").value)) - 1;
-      if (m === perfect) return "🥇 PERFECT GOLD!";
-      if (m <= perfect * 1.2) return "🥈 SILVER PERFORMANCE!";
-      return "🥉 BRONZE FINISH!";
+    function saveRecords(n) {
+      const timeStr = document.getElementById("timer").textContent;
+      const elapsed = (Date.now() - startTime) + totalElapsedBeforePause;
+      let records = JSON.parse(localStorage.getItem('hanoi_records') || '{}');
+      if (!records[n]) records[n] = { time: Infinity, timeStr: "--:--", moves: Infinity };
+      
+      let improved = false;
+      if (moves < records[n].moves) { records[n].moves = moves; improved = true; }
+      if (elapsed < records[n].time) { records[n].time = elapsed; records[n].timeStr = timeStr; improved = true; }
+
+      if (improved) {
+        localStorage.setItem('hanoi_records', JSON.stringify(records));
+        updateRecordsDisplay();
+      }
+    }
+
+    function updateRecordsDisplay() {
+      const records = JSON.parse(localStorage.getItem('hanoi_records') || '{}');
+      const tableBody = document.getElementById("recordTableBody");
+      tableBody.innerHTML = "";
+      
+      Object.keys(records).sort((a,b) => a-b).forEach(n => {
+        const row = tableBody.insertRow();
+        const perfect = Math.pow(2, n) - 1;
+        const status = records[n].moves === perfect ? "🥇 Perfect" : "🥈 Finished";
+        row.innerHTML = `<td>${n} Rings</td><td>${records[n].moves}</td><td>${records[n].timeStr}</td><td style="color:var(--gold)">${status}</td>`;
+      });
+    }
+
+    function startTimer(resuming = false) {
+      timerRunning = true; if (!resuming) startTime = Date.now();
+      timerInterval = setInterval(() => {
+        const elapsed = (Date.now() - startTime) + totalElapsedBeforePause;
+        const mins = Math.floor(elapsed / 60000).toString().padStart(2, '0');
+        const secs = Math.floor((elapsed % 60000) / 1000).toString().padStart(2, '0');
+        document.getElementById("timer").textContent = `${mins}:${secs}`;
+      }, 1000);
     }
 
     function togglePause() {
@@ -301,16 +381,6 @@
         document.body.classList.remove("paused-game");
         document.getElementById("pauseBtn").textContent = "Pause (Space)";
       }
-    }
-
-    function startTimer(resuming = false) {
-      timerRunning = true; if (!resuming) startTime = Date.now();
-      timerInterval = setInterval(() => {
-        const elapsed = (Date.now() - startTime) + totalElapsedBeforePause;
-        const mins = Math.floor(elapsed / 60000).toString().padStart(2, '0');
-        const secs = Math.floor((elapsed % 60000) / 1000).toString().padStart(2, '0');
-        document.getElementById("timer").textContent = `${mins}:${secs}`;
-      }, 1000);
     }
 
     function applyVisualSettings() {
@@ -328,24 +398,7 @@
       towerEl.addEventListener("drop", (e) => executeMove(parseInt(e.dataTransfer.getData("fromTower")), parseInt(towerEl.dataset.id)));
     }
     function updateDraggability() { [1, 2, 3].forEach(id => { const discs = document.getElementById(`tower${id}`).querySelectorAll(".disc"); discs.forEach((d, idx) => d.draggable = (idx === discs.length - 1 && gameActive)); }); }
-    function updateRecordsDisplay() {
-      const n = document.getElementById("discCount").value;
-      const records = JSON.parse(localStorage.getItem('hanoi_records') || '{}');
-      const rec = records[n] || { timeStr: "--:--", moves: "--" };
-      document.getElementById("recordTime").textContent = rec.timeStr;
-      document.getElementById("recordMoves").textContent = rec.moves;
-    }
-    function saveRecords(n) {
-      const timeStr = document.getElementById("timer").textContent;
-      const elapsed = (Date.now() - startTime) + totalElapsedBeforePause;
-      let records = JSON.parse(localStorage.getItem('hanoi_records') || '{}');
-      if (!records[n]) records[n] = { time: Infinity, timeStr: "--:--", moves: Infinity };
-      let improved = false;
-      if (moves < records[n].moves) { records[n].moves = moves; improved = true; }
-      if (elapsed < records[n].time) { records[n].time = elapsed; records[n].timeStr = timeStr; improved = true; }
-      if (improved) { localStorage.setItem('hanoi_records', JSON.stringify(records)); updateRecordsDisplay(); }
-    }
-    function clearAllProgress() { if(confirm("Reset all data?")) { localStorage.removeItem('hanoi_records'); updateRecordsDisplay(); toggleModal(); } }
+    function clearAllProgress() { if(confirm("Reset all?")) { localStorage.removeItem('hanoi_records'); updateRecordsDisplay(); toggleModal(); } }
 
     window.addEventListener("keydown", (e) => {
       if (e.code === "Space") { e.preventDefault(); togglePause(); }
@@ -354,6 +407,7 @@
       if (key === 'u') undoMove();
       if (key === 'r') init();
       if (["1", "2", "3"].includes(key) && gameActive) {
+        if(!timerRunning) startTimer();
         const tid = parseInt(key);
         if (selectedTower === null) {
           if (towers[tid].length > 0) { selectedTower = tid; document.getElementById(`tower${tid}`).classList.add("selected"); }
