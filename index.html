@@ -30,7 +30,7 @@
     }
     .records { color: var(--gold); margin-bottom: 10px; }
 
-    .controls { margin: 10px; padding: 12px; background: var(--accent); border-radius: 8px; display: inline-block; }
+    .controls { margin: 10px; padding: 12px; background: var(--accent); border-radius: 8px; display: inline-block; z-index: 100; position: relative; }
     
     .tower-container {
       display: flex;
@@ -40,10 +40,19 @@
       gap: 60px;
       padding-bottom: 50px;
       margin-top: 20px;
-      transition: opacity 0.3s;
+      transition: opacity 0.3s, filter 0.3s;
     }
 
-    .paused-game .tower-container { opacity: 0.2; pointer-events: none; }
+    .paused-game .tower-container { opacity: 0.1; pointer-events: none; }
+
+    /* Blindfold Mode Styling */
+    .blindfolded .tower-container {
+      filter: brightness(0);
+      background: black;
+    }
+    .blindfolded .tower-container:hover {
+      filter: brightness(0.1); /* Slight peek on hover */
+    }
 
     .tower {
       width: 160px;
@@ -76,7 +85,6 @@
       box-shadow: 0 2px 5px rgba(0,0,0,0.5);
     }
 
-    /* Settings modifiers */
     .hide-numbers .disc { color: transparent; }
     .monochrome .disc { background: #ccd6f6 !important; color: #0a192f !important; border: 1px solid #8892b0; }
 
@@ -89,14 +97,13 @@
     #timer { position: fixed; top: 20px; right: 20px; font-size: 1.2rem; color: var(--gold); }
     #message { margin-top: 15px; font-size: 1.2rem; height: 25px; color: var(--gold); }
 
-    /* Modal Styling */
     #settingsModal {
-      display: none; position: fixed; z-index: 10; left: 0; top: 0;
+      display: none; position: fixed; z-index: 1000; left: 0; top: 0;
       width: 100%; height: 100%; background-color: rgba(0,0,0,0.8);
     }
     .modal-content {
-      background-color: var(--accent); margin: 10% auto; padding: 20px;
-      border: 1px solid var(--text-color); width: 400px; border-radius: 10px;
+      background-color: var(--accent); margin: 5% auto; padding: 20px;
+      border: 1px solid var(--text-color); width: 420px; border-radius: 10px;
       position: relative; text-align: left;
     }
     .close-btn { position: absolute; top: 10px; right: 15px; font-size: 24px; cursor: pointer; color: var(--text-color); }
@@ -148,8 +155,12 @@
         <input type="checkbox" id="checkNumbers" checked onchange="applyVisualSettings()">
       </div>
       <div class="setting-row">
-        <label>Monochrome Mode (No Color)</label>
+        <label>Monochrome Mode</label>
         <input type="checkbox" id="checkMono" onchange="applyVisualSettings()">
+      </div>
+      <div class="setting-row" style="color: #ff4d4d; font-weight: bold;">
+        <label>BLINDFOLD MODE 🕶️</label>
+        <input type="checkbox" id="checkBlind" onchange="applyVisualSettings()">
       </div>
 
       <hr style="border: 0.5px solid #233554; margin: 15px 0;">
@@ -193,6 +204,7 @@
       document.getElementById("message").textContent = "";
       document.getElementById("idealMoves").textContent = Math.pow(2, n) - 1;
       
+      applyVisualSettings();
       updateRecordsDisplay();
       resetTimer();
 
@@ -229,7 +241,7 @@
     }
 
     function togglePause() {
-      if (!timerRunning && moves === 0) return; // Can't pause before game starts
+      if (!timerRunning && moves === 0) return;
       if (!gameActive) return;
 
       isPaused = !isPaused;
@@ -276,6 +288,9 @@
         timerRunning = false;
         clearInterval(timerInterval);
         document.getElementById("message").textContent = "LEVEL COMPLETE!";
+        // Turn off blindfold mode once solved
+        document.getElementById("checkBlind").checked = false;
+        applyVisualSettings();
         saveRecords(n);
       }
     }
@@ -284,9 +299,11 @@
       const body = document.getElementById("game-body");
       const showNumbers = document.getElementById("checkNumbers").checked;
       const isMono = document.getElementById("checkMono").checked;
+      const isBlind = document.getElementById("checkBlind").checked;
 
       showNumbers ? body.classList.remove("hide-numbers") : body.classList.add("hide-numbers");
       isMono ? body.classList.add("monochrome") : body.classList.remove("monochrome");
+      isBlind ? body.classList.add("blindfolded") : body.classList.remove("blindfolded");
     }
 
     function startTimer(resuming = false) {
@@ -300,7 +317,6 @@
       }, 1000);
     }
 
-    // Records, UI, Logic Helpers
     function undoMove() { if (moveHistory.length > 0 && gameActive && !isPaused) { const last = moveHistory.pop(); executeMove(last.to, last.from, true); } }
     function resetTimer() { clearInterval(timerInterval); document.getElementById("timer").textContent = "00:00"; timerRunning = false; }
     function toggleModal() { const m = document.getElementById("settingsModal"); m.style.display = (m.style.display === "block") ? "none" : "block"; }
